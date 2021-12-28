@@ -5,18 +5,41 @@ const axios = require("axios");
 const os = require("os");
 const fs = require("fs");
 const Events = require("events");
+const agents = require('user-agent-array');
 const events = new Events();
 const SpotifyWebApi = require('spotify-web-api-node');
 
 console.log("Welcome, starting...");
 
-var config = JSON.parse(fs.readFileSync("./config.json"));
-var spotifyConfig = JSON.parse(fs.readFileSync("./spotify.json"));
+var config;
+if (fs.existsSync("./config.json")) {
+    config = JSON.parse(fs.readFileSync("./config.json"));
+    if (!config.port) {
+        console.log("Please edit the config.json file with proper credentials.");
+        process.exit();
+    }
+} else {
+    console.log("Please edit the config.json file with proper credentials.");
+    fs.writeFileSync("./config.json", `
+{
+    "spotify": {
+        "client_id": "client id here",
+        "client_secret": "client secret here"
+    },
+    "port": 3000
+}`)
+    process.exit();
+}
+if (!fs.existsSync("./spotify.json")) {
+    console.log("Please login to spotify!");
+}
 
 var current = {
     id: "",
     is_playing: false,
-    playback: {}
+    playback: {},
+    lyrics: null,
+    queue: new Map()
 }
 
 var spotify = new SpotifyWebApi({
@@ -58,10 +81,14 @@ function trackPlayback() {
     .then(async playback => {
         playback = playback.body;
         if (playback.item && playback.is_playing) {
+            let progress = current.playback.progress_ms;
             current.playback = playback;
             if (current.id !== playback.item.id || !current.is_playing) {
+                //new song
                 current.is_playing = true;
                 current.id = playback.item.id;
+                current.queue.delete(current.id);
+                current.lyrics = null;
                 events.emit("data", {
                     return: "spotify/playback",
                     payload: playback
@@ -71,6 +98,26 @@ function trackPlayback() {
                     return: "spotify/lyrics",
                     payload: await getLyrics(playback.item)
                 })
+
+                events.emit("data", {
+                    return: "karaoke/queue",
+                    payload: Object.fromEntries(current.queue)
+                })
+
+                spotify.getMyRecentlyPlayedTracks({
+                    limit: 6
+                })
+                .then(({body}) => {
+                    events.emit("data", {
+                        return: "spotify/history",
+                        payload: body.items
+                    })
+                })
+            } else if ((progress + 1000) < playback.progress_ms || (progress - 1000) > playback.progress_ms) {
+                events.emit("data", {
+                    return: "spotify/time",
+                    payload: playback.progress_ms
+                });
             }
         } else if (current.is_playing == true) {
             current.is_playing = false;
@@ -81,25 +128,37 @@ function trackPlayback() {
     })
     .catch((e) => {
         console.log(e);
+        process.exit();
     })
 }
 setInterval(refreshToken, 120000);
 refreshToken()
-if (spotifyConfig.refresh_token) {
+if (fs.existsSync("./spotify.json")) {
     setInterval(trackPlayback, 500);
 }
-trackPlayback();
 
 function getLyrics(track) {
+    console.log("Getting Lyrics");
     return new Promise((resolve) => {
+        //resolve([]);
+        //return;
+
+        if (current.lyrics) {
+            console.log("Returned Cached Lyrics");
+            resolve(current.lyrics);
+            return;
+        }
+
+        console.log("Returning Lyrics");
         let artists = "";
         track.artists.forEach((item) => (artists += `${item.name}, `));
         artists = artists.substring(0, artists.length - 2);
-        let lyricURL = `https://apic-desktop.musixmatch.com/ws/1.1/macro.subtitles.get?format=json&q_track=${track.name}&q_artist=${track.artists[0].name}&q_artists=${artists}&q_album=${track.album.name}&user_language=en&f_subtitle_length=${(track.duration_ms / 1000).toFixed(0)}&q_duration=${track.duration_ms / 1000}&tags=nowplaying&userblob_id=eW91J3ZlIGRvbmUgZW5vdWdoX2dvcmdvbiBjaXR5XzIxMy41NDY&namespace=lyrics_synched&track_spotify_id=spotify:track:${track.id}&f_subtitle_length_max_deviation=1&subtitle_format=mxm&app_id=web-desktop-app-v1.0&usertoken=18111573a5d5b7855fec189fa5fc591c6a61d4dab03f4e8592f3db&guid=e05094a3-30c0-47e9-b5ed-e3a657a4a72f&signature=fMi1gjVjkDMRQ7a0+tvTvFmCUGo=&signature_protocol=sha1`;
+        let lyricURL = `https://apic-desktop.musixmatch.com/ws/1.1/macro.subtitles.get?format=json&q_track=${track.name}&q_artist=${track.artists[0].name}&q_artists=${artists}&q_album=${track.album.name}&user_language=en&f_subtitle_length=${(track.duration_ms / 1000).toFixed(0)}&q_duration=${track.duration_ms / 1000}&tags=nowplaying&userblob_id=eW91J3ZlIGRvbmUgZW5vdWdoX2dvcmdvbiBjaXR5XzIxMy41NDY&namespace=lyrics_synched&track_spotify_id=spotify:track:${track.id}&f_subtitle_length_max_deviation=1&subtitle_format=mxm&app_id=web-desktop-app-v1.0&usertoken=${config.musixmatch_usertoken}`;
+        let agent = agents[Math.floor(Math.random() * agents.length)];
         axios.get(lyricURL, {
             headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Musixmatch/0.21.27 Chrome/66.0.3359.181 Electron/3.1.3 Safari/537.36",
-                "Cookie": `mxm-encrypted-token=; x-mxm-user-id=g2%3A107362761377830766775; x-mxm-token-guid=e05094a3-30c0-47e9-b5ed-e3a657a4a72f`
+                "User-Agent": agent,
+                "Cookie": `x-mxm-user-id=g2:107362761377830766775; x-mxm-token-guid=a720c3aa-45f3-4c8d-9de8-0419ed153ac3`
             }
         })
         .then(({data}) => {
@@ -108,6 +167,7 @@ function getLyrics(track) {
                 let subtitle = lyrics.message.body.subtitle_list[0].subtitle;
                 if (!subtitle.restricted) {
                     resolve(JSON.parse(subtitle.subtitle_body));
+                    current.lyrics = JSON.parse(subtitle.subtitle_body);
                 } else {
                     resolve(false)
                 }
@@ -146,6 +206,21 @@ app.ws("/", async (ws, req) => {
             payload: await getLyrics(current.playback.item)
         }))
     }
+    
+    spotify.getMyRecentlyPlayedTracks({
+        limit: 6
+    })
+    .then(({body}) => {
+        events.emit("data", {
+            return: "spotify/history",
+            payload: body.items
+        })
+    })
+
+    ws.send(JSON.stringify({
+        return: "karaoke/queue",
+        payload: Object.fromEntries(current.queue)
+    }))
 
     ws.on("message", (msg) => {
         let data;
@@ -154,8 +229,78 @@ app.ws("/", async (ws, req) => {
         } catch (e) {
             ws.close();
         }
-        if (data.method == "karaoke/queue") {
+        if (data.method == "search") {
+            if (data.value) {
+                spotify.search(data.value, ["track"], {limit: 12})
+                .then((data) => {
+                    ws.send(JSON.stringify({
+                        return: "spotify/search",
+                        payload: data.body.tracks.items
+                    }))
+                })
+            }
+        } else if (data.method == "queue") {
+            if (data.isrc && data.uri) {
+                axios.get(`https://api.musixmatch.com/ws/1.1/track.get?track_isrc=${data.isrc}&apikey=86141b48c8ba2f0bce3feb4a5f728a59`)
+                .then(async (musixmatch) => {
+                    musixmatch = musixmatch.data.message.body.track;
+                    if (musixmatch.has_lyrics && musixmatch.has_subtitles && !musixmatch.instrumental && !musixmatch.restricted) {
+                        spotify.addToQueue(data.uri, {device_id: current.playback.device.id})
+                        .catch((e) => {
+                            ws.send(JSON.stringify({
+                                return: "karaoke/error",
+                                payload: "Error contacting services.",
+                                uri: data.uri
+                            }))
+                        })
+                        
+                        ws.send(JSON.stringify({
+                            return: "karaoke/queued",
+                            uri: data.uri
+                        }))
 
+                        let id = data.uri.replace("spotify:track:", "");
+                        spotify.getTrack(id)
+                        .then(({body}) => {
+                            current.queue.set(id, body);
+                            events.emit("data", {
+                                return: "karaoke/queue",
+                                payload: Object.fromEntries(current.queue)
+                            })
+                        })
+                    } else {
+                        ws.send(JSON.stringify({
+                            return: "karaoke/error",
+                            payload: "That track isn't available on our library or may not have lyrics.",
+                            uri: data.uri
+                        }))
+                    }
+                })
+                .catch(() => {
+                    ws.send(JSON.stringify({
+                        return: "karaoke/error",
+                        payload: "That track isn't available on our library."
+                    }))
+                })
+            }
+        } else if (data.method == "catalouge") {
+            spotify.getRecommendations({
+                min_energy: 0.4,
+                seed_artists: [
+                    '0PFtn5NtBbbUNbU9EAmIWF', 
+                    '6zFYqv1mOsgBRQbae3JJ9e', 
+                    '5bYfbDXaMVCxEt7hOAvEWc', 
+                    '6qqNVTkY8uBg9cP3Jd7DAH',
+                    '21UJ7PRWb3Etgsu99f8yo8'
+                ],
+                min_popularity: 75
+            })
+            .then((data) => {
+                ws.send(JSON.stringify({
+                    return: "spotify/catalouge",
+                    payload: data.body.tracks
+                }));
+            })
         }
     })
 
@@ -198,7 +343,8 @@ app.get("/oauth", (req, res) => {
 })
 
 app.listen(config.port, () => {
-    let ip = os.networkInterfaces()['Wi-Fi'].find((i) => {return (i.family == "IPv4")}).address;
+    let interface = os.networkInterfaces()['Wi-Fi'] || os.networkInterfaces()['Ethernet']
+    let ip = interface.find((i) => {return (i.family == "IPv4")}).address;
     console.log(`
 Started Karaoke: 
     

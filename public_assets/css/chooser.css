@@ -1,0 +1,115 @@
+body {
+    background: #293241 !important;
+    color: #FFF !important;
+}
+
+.bg-dark {
+    background-color: rgb(72, 98, 133) !important;
+}
+
+input:focus-visible, input:focus {
+    outline: none;
+}
+
+input::placeholder {
+    color: #9aa7bd !important;
+}
+
+.bg-darker {
+    background-color: #3f4b5f !important;
+}
+
+.pointer {
+    cursor: pointer;
+}
+
+.text-muted {
+    color: #9aa7bd !important;
+}
+
+#song-progress {
+    height: 2px;
+    background-color: #293241;
+}
+
+#song-progress .progress-bar {
+    background-color: #fff;
+}
+
+.added-queue {
+    opacity: .5 !important;
+    pointer-events: none;
+}
+
+.adding-queue {
+    opacity: .75;
+    pointer-events: none;
+}
+
+.seach-loader {
+    height:100%;
+    right:2rem;
+    pointer-events: none;
+    position: absolute;
+    display: flex;
+}
+
+.song-info {
+    max-width: 60%;
+    position: relative;
+}
+
+.song-info::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: .25rem;
+    background-color: rgba(0,0,0,.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: .3s;
+}
+
+.song-info::after {
+    content: '\f1bc';
+    font-family: "Font Awesome 6 Brands";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    width: 40px;
+    margin: auto;
+    opacity: 0;
+    pointer-events: none;
+    text-align: center;
+    font-size: 24px;
+    transition: .3s;
+}
+
+.song-info:hover::after, .song-info:hover::before {
+    opacity: 1;
+}
+
+.queue, .history {
+    width: 75%;
+}
+
+@media (max-width: 997px) {
+    .song-info {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .queue, .history {
+        margin: 0 auto;
+        width: 100%;
+    }
+}
+
+.fa-spin {
+    --fa-animation-duration: .75s;
+    padding-top: 2px
+}

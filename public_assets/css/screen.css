@@ -35,27 +35,28 @@
 }
 
 .lyrics .previous {
-    opacity: .5;
-    font-size: 30px;
+    opacity: .25;
+    font-size: 50px;
     color: #fff;
 }
 
 .lyrics .now {
-    font-size: 80px;
+    margin: 2rem 0;
     font-weight: bold;
+    font-size: 55px;
 }
 
 .lyrics .next {
-    opacity: .75;
-    font-size: 40px;
-    font-weight: bold;
+    opacity: .5;
+    font-size: 50px;
 }
 
 .meta {
     position: absolute;
     display: flex;
     height: 48px;
-    bottom: calc(5rem + 2px);
+    bottom: 5rem;
+    border-bottom: 2px solid rgba(255,255,255,.25);
     left: 5rem;
     right: 5rem;
     color: #fff;
@@ -73,4 +74,9 @@
     background: #fff;
     height: 2px;
     width: 0%;
+}
+
+.fa-beat-fade {
+    --fa-beat-fade-opacity: 0.67; 
+    --fa-beat-fade-scale: 1.075;
 }

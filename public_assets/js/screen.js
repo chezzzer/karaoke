@@ -18,13 +18,22 @@ $(document).on("ws/data", (event, data) => {
 
         current.time = data.payload.progress_ms;
         current.item = track;
-        current.is_playing = true;
-
+        current.is_playing = data.payload.is_playing;
+        
         $(".info-title").html(track.name);
         $(".info-artist").html(artists);
         $(".info-art").attr("src", track.album.images[0].url);
-        $(".screen").css("background", `linear-gradient(90deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.5) 100%), url(${track.album.images[0].url})`);
+        $(".screen").css("background", `linear-gradient(90deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 60%, rgba(0,0,0,0.75) 100%), url(${track.album.images[0].url})`);
         $(".screen").css("background-size", "auto 100%");
+        $(".screen").css("background-position", "right");
+    } else if (data.return == "spotify/time") {
+        current.time = data.payload;
+        $(".previous, .now, .next").html("");
+        if (data.payload < (current.lyrics[0].time.total * 100)) {
+            $(".next").html(current.lyrics[0].text);
+        } else {
+            $(".now").html(`<i class="fa-regular fa-spinner-third fa-spin"></i>`)
+        }
     } else if (data.return == "spotify/lyrics") {
         if (data.payload) {
             current.lyrics = data.payload;
@@ -35,9 +44,12 @@ $(document).on("ws/data", (event, data) => {
             $(".loading #loading-icon").attr("class", "fa-soild fa-times fa-3x");
             $(".loading #loading-text").html("Lyrics not found");
         }
-        if (current.time < 5000) {
+        if (current.time < data.payload[0].time.total * 100) {
             $(".previous, .now").html("");
             $(".next").html(data.payload[0].text);
+        } else {
+            $(".previous, .next").html("");
+            $(".now").html(`<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`)
         }
     } else if (data.return == "spotify/pause") {
         current.is_playing = false;
@@ -50,12 +62,12 @@ setInterval(() => {
             current.lyrics.forEach((lyric, i) => {
                 if (lyric.time.total.toFixed(1) == (current.time / 1000).toFixed(1)) {
                     if (current.lyrics[i-1]) {
-                        $(".lyrics .previous").html(current.lyrics[i-1].text || "🎶");
+                        $(".lyrics .previous").html(current.lyrics[i-1].text || `<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`);
                     }
                     if (current.lyrics[i+1]) {
-                        $(".lyrics .next").html(current.lyrics[i+1].text || "🎶");
+                        $(".lyrics .next").html(current.lyrics[i+1].text || `<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`);
                     }
-                    $(".lyrics .now").html(lyric.text || "🎶");
+                    $(".lyrics .now").html(lyric.text || `<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`);
                 }
             })
         }

@@ -23,6 +23,7 @@
     "express-ws": "^5.0.2",
     "fs": "0.0.1-security",
     "os": "^0.1.2",
-    "spotify-web-api-node": "^5.0.2"
+    "spotify-web-api-node": "^5.0.2",
+    "user-agent-array": "^2.0.1"
   }
 }
