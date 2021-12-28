@@ -30,9 +30,13 @@ $(document).on("ws/data", (event, data) => {
         current.time = data.payload;
         $(".previous, .now, .next").html("");
         if (data.payload < (current.lyrics[0].time.total * 100)) {
-            $(".next").html(current.lyrics[0].text);
+            $(".lyrics").append(`
+                <div class="next">${current.lyrics[0].text}</div>
+            `)
         } else {
-            $(".now").html(`<i class="fa-regular fa-spinner-third fa-spin"></i>`)
+            $(".lyrics").append(`
+                <div class="now"><i class="fa-regular fa-ellipsis fa-beat-fade"></i></div>
+            `)
         }
     } else if (data.return == "spotify/lyrics") {
         if (data.payload) {
@@ -44,12 +48,15 @@ $(document).on("ws/data", (event, data) => {
             $(".loading #loading-icon").attr("class", "fa-soild fa-times fa-3x");
             $(".loading #loading-text").html("Lyrics not found");
         }
+        $(".previous, .now, .next").remove();
         if (current.time < data.payload[0].time.total * 100) {
-            $(".previous, .now").html("");
-            $(".next").html(data.payload[0].text);
+            $(".lyrics").append(`
+                <div class="next">${current.lyrics[0].text || `<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`}</div>
+            `)
         } else {
-            $(".previous, .next").html("");
-            $(".now").html(`<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`)
+            $(".lyrics").append(`
+                <div class="next"><i class="fa-regular fa-ellipsis fa-beat-fade"></i></div>
+            `)
         }
     } else if (data.return == "spotify/pause") {
         current.is_playing = false;
@@ -58,20 +65,33 @@ $(document).on("ws/data", (event, data) => {
 
 setInterval(() => {
     if (current.is_playing) {
+        current.time += 100
         if (current.lyrics.length) {
             current.lyrics.forEach((lyric, i) => {
                 if (lyric.time.total.toFixed(1) == (current.time / 1000).toFixed(1)) {
+                    $(".lyrics .last").remove();
+
+                    $(".lyrics .previous").attr("class", "last");
+
+                    $(".lyrics .now").attr("class", "previous")
                     if (current.lyrics[i-1]) {
                         $(".lyrics .previous").html(current.lyrics[i-1].text || `<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`);
+                    } else {
+                        $(".lyrics .previous").html(`<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`);
                     }
-                    if (current.lyrics[i+1]) {
-                        $(".lyrics .next").html(current.lyrics[i+1].text || `<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`);
-                    }
+
+                    $(".lyrics .next").attr("class", "now")
                     $(".lyrics .now").html(lyric.text || `<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`);
+                    if (current.lyrics[i+1]) {
+                        $(".lyrics").append(`
+                            <div class="next animate__animated animate__fadeInUp">${current.lyrics[i+1].text || `<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`}</div>
+                        `)
+                    } else {
+                        $(".lyrics").append(`<div class="next animate__animated animate__fadeInUp"><i class="fa-regular fa-ellipsis fa-beat-fade"></i></div>`)
+                    }
                 }
             })
         }
-        current.time += 100
     }
 }, 100)
 

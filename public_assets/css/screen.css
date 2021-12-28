@@ -23,7 +23,7 @@
     display: flex;
     position: absolute;
     left:0;
-    top:0;
+    top:-10rem;
     width: 100%;
     height: 100%;
     color: #fff;
@@ -32,22 +32,44 @@
 .lyrics {
     margin: auto auto auto 0;
     padding: 0 10rem;
+    position: relative;
+    width: 100%;
+}
+
+.lyrics * {
+    width: 100%;
+    transition: .3s all;
+    animation: fadeInUp;
+    animation-duration: .3s !important;
+}
+
+.lyrics .last {
+    position: absolute;
+    top: -50px;
+    opacity: 0;
+    font-size: 50px;
+    color: #fff;
 }
 
 .lyrics .previous {
+    position: absolute;
+    top: 0;
     opacity: .25;
     font-size: 50px;
     color: #fff;
 }
 
 .lyrics .now {
-    margin: 2rem 0;
-    font-weight: bold;
+    position: absolute;
+    top: 7rem;
     font-size: 55px;
+    margin-top: 0px !important;
 }
 
 .lyrics .next {
-    opacity: .5;
+    top: 14rem;
+    position: absolute;
+    filter: opacity(.5);
     font-size: 50px;
 }
 

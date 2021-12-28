@@ -101,7 +101,7 @@ $(document).on("ws/data", (event, data) => {
         $(".queue").html("");
         let queue = Object.keys(data.payload);
         if (!queue.length) {
-            $(".queue").html("<div class=\"col-sm-12 d-flex\"><div class=\"mx-auto text-muted p-2 mx-auto shadow bg-darker rounded\">No songs queued, search for a song to add to the list!</div></div>");
+            $(".queue").html("<div class=\"col-sm-12\"><div class=\"text-muted p-2 mx-auto shadow bg-darker rounded\">No songs queued, search for a song to add to the list!</div></div>");
         }
         queue.forEach((item) => {
             item = data.payload[item];

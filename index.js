@@ -11,6 +11,7 @@ const SpotifyWebApi = require('spotify-web-api-node');
 
 console.log("Welcome, starting...");
 
+//read config
 var config;
 if (fs.existsSync("./config.json")) {
     config = JSON.parse(fs.readFileSync("./config.json"));
@@ -26,7 +27,12 @@ if (fs.existsSync("./config.json")) {
         "client_id": "client id here",
         "client_secret": "client secret here"
     },
-    "port": 3000
+    "volume": {
+        "queue": 1,
+        "playlist": 0.5
+    },
+    "port": 3000,
+    "musixmatch_usertoken": "usertoken here"
 }`)
     process.exit();
 }
@@ -42,6 +48,7 @@ var current = {
     queue: new Map()
 }
 
+//start API
 var spotify = new SpotifyWebApi({
   clientId: config.spotify.client_id,
   clientSecret: config.spotify.client_secret,
@@ -54,11 +61,15 @@ if (!fs.existsSync("./config.json")) {
 }
 
 function refreshToken() {
+    //check if credentials exist
     if (fs.existsSync("./spotify.json")) {
         let spotifyData = JSON.parse(fs.readFileSync("./spotify.json"));
+        //set old/new tokens
         spotify.setAccessToken(spotifyData['access_token']);
         spotify.setRefreshToken(spotifyData['refresh_token']);
+        //check weather date has exceeded 55 minutes
         if (new Date().getTime() > spotifyData.refreshed+3300000) {
+            //if so refresh and set back into file and into api SDK
             spotify.refreshAccessToken().then((data) => {
                 spotify.setAccessToken(data.body['access_token']);
                 fs.writeFileSync("./spotify.json", JSON.stringify({
@@ -77,33 +88,60 @@ function refreshToken() {
 }
 
 function trackPlayback() {
+    //get playback
     spotify.getMyCurrentPlaybackState()
     .then(async playback => {
         playback = playback.body;
+        //check if there is a current song playing and is not paused
         if (playback.item && playback.is_playing) {
+            //store progress for later
             let progress = current.playback.progress_ms;
+            //update current song
             current.playback = playback;
+
+            //check weather it is a new song against the currently playing track in the code
             if (current.id !== playback.item.id || !current.is_playing) {
                 //new song
+                console.log(`   
+                
+New Song
+
+${playback.item.artists[0].name} - ${playback.item.name}
+                `)
+
+                //resume because impossible to not be
                 current.is_playing = true;
+                //update id
                 current.id = playback.item.id;
-                current.queue.delete(current.id);
+                //check if track is in queue
+                if (current.queue.has(current.id)) {
+                    //delete current track from queue
+                    current.queue.delete(current.id);
+
+                    //set volume to queue volume in config
+                    spotify.setVolume(config.volume.queue)
+                } else {
+                    //set volume to playlist volume in config
+                    spotify.setVolume(config.volume.playlist)
+                }
+                //reset lyrics
                 current.lyrics = null;
+                //tell all sockets its new song time
                 events.emit("data", {
                     return: "spotify/playback",
                     payload: playback
                 });
-
+                //tell all sockets its new lyrics time
                 events.emit("data", {
                     return: "spotify/lyrics",
                     payload: await getLyrics(playback.item)
                 })
-
+                //tell all sockets that the queue has changed
                 events.emit("data", {
                     return: "karaoke/queue",
                     payload: Object.fromEntries(current.queue)
                 })
-
+                //tell all sockets that the recent tracks has changed
                 spotify.getMyRecentlyPlayedTracks({
                     limit: 6
                 })
@@ -114,13 +152,17 @@ function trackPlayback() {
                     })
                 })
             } else if ((progress + 1000) < playback.progress_ms || (progress - 1000) > playback.progress_ms) {
+                //if the current song has no indication of changing, check if there has been a time change by detecting if the player has been moved by 1 second
                 events.emit("data", {
                     return: "spotify/time",
                     payload: playback.progress_ms
                 });
             }
         } else if (current.is_playing == true) {
+            //if the player is paused and the code thinks its still playing
             current.is_playing = false;
+
+            //send out to all sockets to stop their clocks
             events.emit("data", {
                 return: "spotify/pause"
             });
@@ -131,30 +173,48 @@ function trackPlayback() {
         process.exit();
     })
 }
+
+//check the token every 2 minutes
 setInterval(refreshToken, 120000);
+//refresh it now since it might've been some time since we ran this code
 refreshToken()
+//check if credentials exist
 if (fs.existsSync("./spotify.json")) {
+    //track playback of the client by checking it every 500ms, why no WS spotify!
     setInterval(trackPlayback, 500);
 }
 
+var lyricsBusy = false;
+//lyric function
 function getLyrics(track) {
-    console.log("Getting Lyrics");
+    //track = spotify track
     return new Promise((resolve) => {
         //resolve([]);
         //return;
 
+        //check if lock is there so we don't get rate limited during caching
+        if (lyricsBusy) return resolve(false);
+        lyricsBusy = true;;
+
+        //check if we already have lyrics stored so we don't annoy musixmatch
         if (current.lyrics) {
-            console.log("Returned Cached Lyrics");
             resolve(current.lyrics);
+            lyricsBusy = false;
             return;
         }
 
-        console.log("Returning Lyrics");
+        //combine artists
         let artists = "";
         track.artists.forEach((item) => (artists += `${item.name}, `));
         artists = artists.substring(0, artists.length - 2);
+
+        //formulate URL to musixmatch API.
         let lyricURL = `https://apic-desktop.musixmatch.com/ws/1.1/macro.subtitles.get?format=json&q_track=${track.name}&q_artist=${track.artists[0].name}&q_artists=${artists}&q_album=${track.album.name}&user_language=en&f_subtitle_length=${(track.duration_ms / 1000).toFixed(0)}&q_duration=${track.duration_ms / 1000}&tags=nowplaying&userblob_id=eW91J3ZlIGRvbmUgZW5vdWdoX2dvcmdvbiBjaXR5XzIxMy41NDY&namespace=lyrics_synched&track_spotify_id=spotify:track:${track.id}&f_subtitle_length_max_deviation=1&subtitle_format=mxm&app_id=web-desktop-app-v1.0&usertoken=${config.musixmatch_usertoken}`;
+        
+        //get random user agent to aviod suspision
         let agent = agents[Math.floor(Math.random() * agents.length)];
+
+        //make request
         axios.get(lyricURL, {
             headers: {
                 "User-Agent": agent,
@@ -163,39 +223,52 @@ function getLyrics(track) {
         })
         .then(({data}) => {
             let lyrics = data.message.body.macro_calls['track.subtitles.get'];
+            //check if lyrics are there
             if (lyrics.message.body && lyrics.message.body.subtitle_list.length) {
                 let subtitle = lyrics.message.body.subtitle_list[0].subtitle;
+                //check if it is restricted or not
                 if (!subtitle.restricted) {
+                    //return them back and update the code's cache
                     resolve(JSON.parse(subtitle.subtitle_body));
                     current.lyrics = JSON.parse(subtitle.subtitle_body);
+
+                    //cancel lock
+                    lyricsBusy = false;
                 } else {
                     resolve(false)
+                    lyricsBusy = false;
                 }
             } else {
-                console.log(lyricURL);
+                console.log(`Unable to get lyrics for this song.`, data);
                 resolve(false)
+                lyricsBusy = false;
             }
         })
         .catch((e) => {
-            console.log(lyricURL);
+            console.log(`Unable to get lyrics for this song.`);
             resolve(false)
+            lyricsBusy = false;
         })
     })
 }
 
+//static serve assets and webpages
 app.use('/assets', express.static('public_assets'));
 app.use('/screen', express.static('public_screen'));
 app.use('/', express.static('public_chooser'));
 
 app.ws("/", async (ws, req) => {
+    //subscribe to data event for global messages
     let listen = (json) => {
         ws.send(JSON.stringify(json));
     }
     events.on("data", listen);
 
+    //send connection success
     ws.send(JSON.stringify({return: "connection/success"}))
 
-    if (current.playback.item) {
+    //if there is something playing
+    if (current.playback.item && current.is_playing) {
         ws.send(JSON.stringify({
             return: "spotify/playback",
             payload: current.playback
@@ -207,6 +280,7 @@ app.ws("/", async (ws, req) => {
         }))
     }
     
+    //send recent tracks, queue
     spotify.getMyRecentlyPlayedTracks({
         limit: 6
     })
@@ -223,6 +297,7 @@ app.ws("/", async (ws, req) => {
     }))
 
     ws.on("message", (msg) => {
+        //decode JSON data
         let data;
         try {
             data = JSON.parse(msg);
@@ -241,10 +316,13 @@ app.ws("/", async (ws, req) => {
             }
         } else if (data.method == "queue") {
             if (data.isrc && data.uri) {
+                //check if song has lyrics
                 axios.get(`https://api.musixmatch.com/ws/1.1/track.get?track_isrc=${data.isrc}&apikey=86141b48c8ba2f0bce3feb4a5f728a59`)
                 .then(async (musixmatch) => {
                     musixmatch = musixmatch.data.message.body.track;
+                    //check if it is restricted or an instrumental
                     if (musixmatch.has_lyrics && musixmatch.has_subtitles && !musixmatch.instrumental && !musixmatch.restricted) {
+                        //add it to the queue
                         spotify.addToQueue(data.uri, {device_id: current.playback.device.id})
                         .catch((e) => {
                             ws.send(JSON.stringify({
@@ -254,15 +332,19 @@ app.ws("/", async (ws, req) => {
                             }))
                         })
                         
+                        //tell client that this peticular song has been queued
                         ws.send(JSON.stringify({
                             return: "karaoke/queued",
                             uri: data.uri
                         }))
 
+                        //put it into the full track into memory for future calls
                         let id = data.uri.replace("spotify:track:", "");
                         spotify.getTrack(id)
                         .then(({body}) => {
+                            //insert into queue
                             current.queue.set(id, body);
+                            //inform all sockets that there is a queue change
                             events.emit("data", {
                                 return: "karaoke/queue",
                                 payload: Object.fromEntries(current.queue)
@@ -300,6 +382,9 @@ app.ws("/", async (ws, req) => {
                     return: "spotify/catalouge",
                     payload: data.body.tracks
                 }));
+            })
+            .catch((e) => {
+                console.log(e);
             })
         }
     })

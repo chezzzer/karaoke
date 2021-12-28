@@ -1,5 +1,7 @@
 var socket;
 function connect() {
+    if (socket) {if (socket.CONNECTING) {return}};
+
     socket = new WebSocket("ws://"+location.host);
 
     socket.onmessage = (msg) => {
@@ -12,7 +14,15 @@ function connect() {
         $(document).trigger("ws/data", [data]);
     }
 
-    socket.onclose = () => {setTimeout(connect, 2000)};
-    socket.onerror = () => {setTimeout(connect, 30000)};
+    socket.onclose = () => {
+        console.log("Socket was closed, trying to connect in 5 seconds")
+        setTimeout(connect, 5000)
+    };
+    socket.onerror = (e) => {
+        console.log("Socket errored", e)
+    };
+    socket.onopen = () => {
+        console.log("Socket reconnected");
+    }
 }
 connect();
