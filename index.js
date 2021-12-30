@@ -200,7 +200,9 @@ if (fs.existsSync("./spotify.json")) {
     //refresh it now since it might've been some time since we ran this code
     refreshToken()
     //track playback of the client by checking it every 500ms, why no WS spotify!
-    setInterval(trackPlayback, 500);
+    setTimeout(() => {
+        setInterval(trackPlayback, 500);
+    }, 1000)
 }
 
 var lyricsBusy = false;
