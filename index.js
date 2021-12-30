@@ -75,7 +75,8 @@ function refreshToken() {
         //check weather date has exceeded 55 minutes
         if (new Date().getTime() > spotifyData.refreshed+3300000) {
             //if so refresh and set back into file and into api SDK
-            spotify.refreshAccessToken().then((data) => {
+            spotify.refreshAccessToken()
+            .then((data) => {
                 spotify.setAccessToken(data.body['access_token']);
                 fs.writeFileSync("./spotify.json", JSON.stringify({
                     access_token: data.body.access_token,
@@ -165,6 +166,9 @@ ${playback.item.artists[0].name} - ${playback.item.name}
                         return: "spotify/history",
                         payload: body.items
                     })
+                })
+                .catch((e) => {
+                    console.log("Error with retriving recently played tracks", e);
                 })
             } else if ((progress + 1500) < playback.progress_ms || (progress - 1500) > playback.progress_ms) {
                 //if the current song has no indication of changing, check if there has been a time change by detecting if the player has been moved by 1 second
@@ -313,6 +317,9 @@ app.ws("/", async (ws, req) => {
             payload: body.items
         })
     })
+    .catch((e) => {
+        console.log("Error with retriving recently played tracks", e)
+    })
 
     ws.send(JSON.stringify({
         return: "karaoke/queue",
@@ -408,7 +415,7 @@ app.ws("/", async (ws, req) => {
                 }));
             })
             .catch((e) => {
-                console.log(e);
+                console.log("Error with recommendations", e);
             })
         } else if (data.method == "admin") {
             if (data.password == config.admin_password) {
