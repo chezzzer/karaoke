@@ -191,10 +191,10 @@ ${playback.item.artists[0].name} - ${playback.item.name}
 
 //check the token every 2 minutes
 setInterval(refreshToken, 120000);
-//refresh it now since it might've been some time since we ran this code
-refreshToken()
 //check if credentials exist
 if (fs.existsSync("./spotify.json")) {
+    //refresh it now since it might've been some time since we ran this code
+    refreshToken()
     //track playback of the client by checking it every 500ms, why no WS spotify!
     setInterval(trackPlayback, 500);
 }
