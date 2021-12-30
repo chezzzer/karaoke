@@ -3,6 +3,22 @@ body {
     color: #FFF !important;
 }
 
+.modal * {
+    color: #000;
+}
+
+.admin-item {
+    display: none !important;
+}
+
+.admin .admin-item {
+    display: inherit !important;
+}
+
+.admin .admin-item.admin-remove-queue {
+    display: inline !important;
+}
+
 .bg-dark {
     background-color: rgb(72, 98, 133) !important;
 }
@@ -93,18 +109,9 @@ input::placeholder {
     opacity: 1;
 }
 
-.queue, .history {
-    width: 75%;
-}
-
 @media (max-width: 997px) {
     .song-info {
         max-width: 100%;
-        width: 100%;
-    }
-
-    .queue, .history {
-        margin: 0 auto;
         width: 100%;
     }
 }

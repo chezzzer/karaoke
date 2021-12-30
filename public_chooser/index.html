@@ -23,7 +23,7 @@
             <div class="song-info">
                 <a href="" target="_blank" class="text-white text-decoration-none" id="song-link">
                     <div class="d-flex p-2 bg-darker shadow rounded" style="min-width: 200px;">
-                        <img src="/assets/img/logo.png" width="52px" height="52px" style="object-fit: cover;" class="my-auto" id="song-art">
+                        <img src="/assets/img/logo.png" width="52px" height="52px" style="object-fit: cover;" class="my-auto rounded" id="song-art">
                         <div class="ms-3 me-2 my-auto w-100">
                             <div id="song-title" class="fw-bold lh-1">No Song Playing</div>
                             <small class="text-muted" id="song-artists"></small>
@@ -56,19 +56,80 @@
             <div class="catalouge mt-3 row"></div>
         </div>
         <div class="mt-4 row">
-            <div class="col-sm-6 mb-3">
+            <div class="col-sm-5 mb-3">
                 <h3>Coming Up</h3>
                 <div class="queue row mt-3"></div>
             </div>
-            <div class="col-sm-6 mb-3">
+            <div class="col-sm-5 offset-sm-2 mb-3">
                 <h3>Recently Played</h3>
                 <div class="history row mt-3"></div>
             </div>
         </div>
-        <div class="py-4 text-center text-muted fw-bold">
-            ©️ Copyright Ryan Cherry 2021 - 2022
+        <div id="admin" style="display: none;">
+            <h3>Admin Controls</h3>
+            <div class="row">
+                <div class="col-sm-4 mb-3">
+                    <h5>Lyric Sync</h5>
+                    <input type="range" class="form-range" min="-1000" value="0" max="1000" id="lyric-sync">
+                    <div class="d-flex">
+                        <div class="w-50">
+                            Lyrics are faster
+                        </div>
+                        <div class="w-50 text-end">
+                            Lyrics are slower
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-4 my-auto">
+                    <div class="d-flex">
+                        <div class="w-100 d-flex">
+                            <a onclick="player('previous')" class="m-auto btn btn-secondary px-3">
+                                <i class="fa-light fa-backward"></i>
+                            </a>
+                        </div>
+                        <div class="w-100 d-flex">
+                            <a onclick="player('replay')" class="m-auto btn btn-secondary px-3">
+                                <i class="fa-light fa-arrows-repeat"></i>
+                            </a>
+                        </div>
+                        <div class="w-100 d-flex">
+                            <a onclick="player('pause')" class="m-auto btn btn-secondary px-3">
+                                <i class="fa-light fa-pause"></i>
+                            </a>
+                        </div>
+                        <div class="w-100 d-flex">
+                            <a onclick="player('play')" class="m-auto btn btn-secondary px-3">
+                                <i class="fa-light fa-play"></i>
+                            </a>
+                        </div>
+                        <div class="w-100 d-flex">
+                            <a onclick="player('next')" class="m-auto btn btn-secondary px-3">
+                                <i class="fa-light fa-forward"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="py-4 text-center text-muted" id="footer">
+            <b>©️ Copyright Ryan Cherry 2021 - 2022 </b> <a id="adminLogin" href="#adminModal" data-bs-toggle="modal" style="opacity: .5;" class="text-muted text-decoration-none ps-1">Admin</a>
         </div>
     </div>
+    <div class="modal fade" id="adminModal">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Login</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <label for="admin-password" class="form-label">Password</label>
+                <input type="password" class="form-control mb-3" name="admin-password" placeholder="password">
+                <a onclick="requestAdmin()" class="mx-auto btn btn-primary text-white">Submit</a>
+            </div>
+          </div>
+        </div>
+      </div>
     <script src="/assets/js/bootstrap.bundle.min.js"></script>
     <script src="/assets/js/jquery-3.6.0.min.js"></script>
     <script src="/assets/js/socket.js"></script>

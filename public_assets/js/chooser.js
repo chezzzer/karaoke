@@ -37,11 +37,11 @@ function makeSongItem(item, column = 3, ableToQueue = true) {
         <div class="col-sm-${column} mb-4">
             <div class="bg-darker shadow d-flex p-2 rounded" track-uri="${item.uri}">
                 <a href="https://open.spotify.com/track/${item.id}" target="_blank">
-                    <img src="${item.album.images[2].url}" width="48px" height="48px" style="object-fit:cover" class="shadow-sm">
+                    <img src="${item.album.images[2].url}" width="48px" height="48px" style="object-fit:cover" class="shadow-sm rounded">
                 </a>
                 <div class="ms-3 my-auto text-nowrap overflow-hidden me-2">
                     <div class="fw-bold">${item.name}</div>
-                    <div class="text-muted">${combineArtists(item.artists)}</div>
+                    <div class="text-muted">${combineArtists(item.artists)} <span class="extra"></span>${ableToQueue ? "" : `<span class="admin-item admin-remove-queue text-decoration-underline pointer d-inline" onclick="removeQueue('${item.id}')">Remove</span>`}</div>
                 </div>
                 <div class="m-auto me-1 ${ableToQueue ? "" : "d-none"}">
                     <a onclick="queueItem('${item.uri}', '${item.external_ids.isrc}')">
@@ -59,7 +59,12 @@ function refreshCatalouge() {
 
 $(document).on("ws/data", (event, data) => {
     if (data.return == "connection/success") {
-        refreshCatalouge()
+        if (!$(".catalouge .col-sm-3").length) {
+            refreshCatalouge()
+        }
+        if (getCookie("admin_password")) {
+            requestAdmin()
+        }
     } else if (data.return == "spotify/search") {
         $(".search-results").html("");
         $(".search-results").fadeIn(0);
@@ -112,8 +117,28 @@ $(document).on("ws/data", (event, data) => {
         data.payload.forEach((item) => {
             $(".history").append(makeSongItem(item.track, 12));
         })
+    } else if (data.return == "karaoke/admin") {
+        $("#adminModal").modal("hide");
+        $("#admin").fadeIn();
+        $("body").addClass("admin");
+        $("#adminLogin").remove();
+        $("#footer").append(`<a onclick="setCookie('admin_password', '');location.reload()" class="text-muted text-decoration-none ps-1 pointer">Log Out</a>`)
+        let password = $("[name=admin-password]").val();
+        if (!getCookie("admin_password") && password) {
+            setCookie("admin_password", password)
+        }
     }
 })
+
+function secondsToString(given_seconds) {
+    dateObj = new Date(given_seconds * 1000);
+    hours = dateObj.getUTCHours();
+    minutes = dateObj.getUTCMinutes();
+    seconds = dateObj.getSeconds();
+
+    return minutes.toString().padStart(2, '0') + ':' + 
+    seconds.toString().padStart(2, '0');
+}
 
 setInterval(() => {
     if (!current.paused) {
@@ -130,4 +155,69 @@ setInterval(() => {
         .split(`, `)[1]
         .toLocaleLowerCase()
     )
+    if ($(".queue .col-sm-12").length) {
+        let time = (current.duration-current.time)/1000;
+        if (time <= 11) {
+            $(".queue .col-sm-12:first-child .extra").attr("class", "extra badge bg-danger me-2")
+        } else if (time < 20) {
+            $(".queue .col-sm-12:first-child .extra").attr("class", "extra badge bg-warning me-2")
+        } else {
+            $(".queue .col-sm-12:first-child .extra").attr("class", "extra badge bg-dark me-2")
+        }
+        $(".queue .col-sm-12:first-child .extra").html(`Playing in ${secondsToString(time)}`)
+    }
 }, 1000)
+
+function requestAdmin() {
+    socket.send(JSON.stringify({
+        method: "admin",
+        password: $("[name=admin-password]").val() || getCookie("admin_password")
+    }))
+}
+
+$("#admin #lyric-sync").on("change", () => {
+    socket.send(JSON.stringify({
+        method: "sync",
+        password: $("[name=admin-password]").val() || getCookie("admin_password"),
+        value: Number($("#admin #lyric-sync").val())
+    }))
+    $("#admin #lyric-sync").val(0);
+})
+
+function removeQueue(id) {
+    socket.send(JSON.stringify({
+        method: "removeQueue",
+        password: $("[name=admin-password]").val() || getCookie("admin_password"),
+        id
+    }))
+}
+
+function player(action) {
+    socket.send(JSON.stringify({
+        method: "player",
+        password: $("[name=admin-password]").val() || getCookie("admin_password"),
+        action
+    }))
+}
+
+function setCookie(cname, cvalue, exdays) {
+    const d = new Date();
+    d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
+    let expires = "expires="+d.toUTCString();
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+}
+  
+function getCookie(cname) {
+    let name = cname + "=";
+    let ca = document.cookie.split(';');
+    for(let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) == ' ') {
+        c = c.substring(1);
+      }
+      if (c.indexOf(name) == 0) {
+        return c.substring(name.length, c.length);
+      }
+    }
+    return "";
+}  

@@ -4,6 +4,7 @@ require('express-ws')(app);
 const axios = require("axios");
 const os = require("os");
 const fs = require("fs");
+const Vibrant = require('node-vibrant')
 const Events = require("events");
 const agents = require('user-agent-array');
 const events = new Events();
@@ -28,11 +29,14 @@ if (fs.existsSync("./config.json")) {
         "client_secret": "client secret here"
     },
     "volume": {
-        "queue": 1,
-        "playlist": 0.5
+        "queue": 100,
+        "playlist": 50
     },
     "port": 3000,
-    "musixmatch_usertoken": "usertoken here"
+    "admin_password": "pa33w0rd",
+    "musixmatch_usertokens": [
+        "tokens here"
+    ]
 }`)
     process.exit();
 }
@@ -45,14 +49,15 @@ var current = {
     is_playing: false,
     playback: {},
     lyrics: null,
+    color: [],
     queue: new Map()
 }
 
 //start API
 var spotify = new SpotifyWebApi({
-  clientId: config.spotify.client_id,
-  clientSecret: config.spotify.client_secret,
-  redirectUri: `http://localhost:${config.port}/oauth`
+    clientId: config.spotify.client_id,
+    clientSecret: config.spotify.client_secret,
+    redirectUri: `http://localhost:${config.port}/oauth`
 });
 
 if (!fs.existsSync("./config.json")) {
@@ -96,6 +101,9 @@ function trackPlayback() {
         if (playback.item && playback.is_playing) {
             //store progress for later
             let progress = current.playback.progress_ms;
+
+            playback.item.color = current.color;
+
             //update current song
             current.playback = playback;
 
@@ -124,12 +132,19 @@ ${playback.item.artists[0].name} - ${playback.item.name}
                     //set volume to playlist volume in config
                     spotify.setVolume(config.volume.playlist)
                 }
+                
+                //get album art color
+                let palette = await Vibrant.from(current.playback.item.album.images[2].url).getPalette()
+                current.color = palette.Vibrant._rgb;
+                current.playback.item.color = current.color;
+
+
                 //reset lyrics
                 current.lyrics = null;
                 //tell all sockets its new song time
                 events.emit("data", {
                     return: "spotify/playback",
-                    payload: playback
+                    payload: current.playback
                 });
                 //tell all sockets its new lyrics time
                 events.emit("data", {
@@ -151,7 +166,7 @@ ${playback.item.artists[0].name} - ${playback.item.name}
                         payload: body.items
                     })
                 })
-            } else if ((progress + 1000) < playback.progress_ms || (progress - 1000) > playback.progress_ms) {
+            } else if ((progress + 1500) < playback.progress_ms || (progress - 1500) > playback.progress_ms) {
                 //if the current song has no indication of changing, check if there has been a time change by detecting if the player has been moved by 1 second
                 events.emit("data", {
                     return: "spotify/time",
@@ -208,8 +223,11 @@ function getLyrics(track) {
         track.artists.forEach((item) => (artists += `${item.name}, `));
         artists = artists.substring(0, artists.length - 2);
 
+        //get random usertoken to aviod rate limits
+        let token = config.musixmatch_usertokens[Math.floor(Math.random() * config.musixmatch_usertokens.length)];
+
         //formulate URL to musixmatch API.
-        let lyricURL = `https://apic-desktop.musixmatch.com/ws/1.1/macro.subtitles.get?format=json&q_track=${track.name}&q_artist=${track.artists[0].name}&q_artists=${artists}&q_album=${track.album.name}&user_language=en&f_subtitle_length=${(track.duration_ms / 1000).toFixed(0)}&q_duration=${track.duration_ms / 1000}&tags=nowplaying&userblob_id=eW91J3ZlIGRvbmUgZW5vdWdoX2dvcmdvbiBjaXR5XzIxMy41NDY&namespace=lyrics_synched&track_spotify_id=spotify:track:${track.id}&f_subtitle_length_max_deviation=1&subtitle_format=mxm&app_id=web-desktop-app-v1.0&usertoken=${config.musixmatch_usertoken}`;
+        let lyricURL = `https://apic-desktop.musixmatch.com/ws/1.1/macro.subtitles.get?format=json&q_track=${track.name}&q_artist=${track.artists[0].name}&q_artists=${artists}&q_album=${track.album.name}&user_language=en&f_subtitle_length=${(track.duration_ms / 1000).toFixed(0)}&q_duration=${track.duration_ms / 1000}&tags=nowplaying&namespace=lyrics_synched&track_spotify_id=spotify:track:${track.id}&f_subtitle_length_max_deviation=1&subtitle_format=mxm&app_id=web-desktop-app-v1.0&usertoken=${token}`;
         
         //get random user agent to aviod suspision
         let agent = agents[Math.floor(Math.random() * agents.length)];
@@ -228,9 +246,14 @@ function getLyrics(track) {
                 let subtitle = lyrics.message.body.subtitle_list[0].subtitle;
                 //check if it is restricted or not
                 if (!subtitle.restricted) {
+                    let lyrics = JSON.parse(subtitle.subtitle_body);
+
+                    //set last lyric as "End"
+                    lyrics[lyrics.length - 1].text = "End";
+
                     //return them back and update the code's cache
-                    resolve(JSON.parse(subtitle.subtitle_body));
-                    current.lyrics = JSON.parse(subtitle.subtitle_body);
+                    resolve(lyrics);
+                    current.lyrics = lyrics;
 
                     //cancel lock
                     lyricsBusy = false;
@@ -367,15 +390,16 @@ app.ws("/", async (ws, req) => {
             }
         } else if (data.method == "catalouge") {
             spotify.getRecommendations({
-                min_energy: 0.4,
-                seed_artists: [
-                    '0PFtn5NtBbbUNbU9EAmIWF', 
-                    '6zFYqv1mOsgBRQbae3JJ9e', 
-                    '5bYfbDXaMVCxEt7hOAvEWc', 
-                    '6qqNVTkY8uBg9cP3Jd7DAH',
-                    '21UJ7PRWb3Etgsu99f8yo8'
+                min_danceability: 0.25,
+                seed_genres: [
+                    "rock",
+                    "rock-n-roll",
+                    "rockabilly",
+                    "pop",
+                    "new-release"
                 ],
-                min_popularity: 75
+                min_popularity: 75,
+                market: "NZ"
             })
             .then((data) => {
                 ws.send(JSON.stringify({
@@ -386,6 +410,50 @@ app.ws("/", async (ws, req) => {
             .catch((e) => {
                 console.log(e);
             })
+        } else if (data.method == "admin") {
+            if (data.password == config.admin_password) {
+                ws.send(JSON.stringify({
+                    return: "karaoke/admin"
+                }))
+            } else {
+                ws.send(JSON.stringify({
+                    return: "karaoke/error",
+                    payload: "Incorrect Password"
+                }))
+            }
+        } else if (data.method == "sync") {
+            if (data.password == config.admin_password) {
+                events.emit("data", {
+                    return: "karaoke/sync",
+                    payload: data.value
+                })
+            }
+        } else if (data.method == "removeQueue") {
+            if (data.password == config.admin_password) {
+                current.queue.delete(data.id);
+                events.emit("data", {
+                    return: "karaoke/queue",
+                    payload: Object.fromEntries(current.queue)
+                })
+            }
+        } else if (data.method == "player") {
+            if (data.password == config.admin_password) {
+                if (data.action == "previous") {
+                    spotify.skipToPrevious();
+                } else if (data.action == "pause") {
+                    spotify.pause();
+                } else if (data.action == "play") {
+                    spotify.play();
+                } else if (data.action == "next") {
+                    spotify.skipToNext();
+                } else if (data.action == "replay") {
+                    spotify.seek(0);
+                }
+            }
+        } else if (data.method == "ping") {
+            ws.send(JSON.stringify({
+                return: "connection/pong"
+            }))
         }
     })
 

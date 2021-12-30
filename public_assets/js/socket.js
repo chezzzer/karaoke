@@ -2,7 +2,7 @@ var socket;
 function connect() {
     if (socket) {if (socket.CONNECTING) {return}};
 
-    socket = new WebSocket("ws://"+location.host);
+    socket = new WebSocket(`ws${location.protocol == "https:" ? "s" : ""}://`+location.host);
 
     socket.onmessage = (msg) => {
         let data;
@@ -22,7 +22,15 @@ function connect() {
         console.log("Socket errored", e)
     };
     socket.onopen = () => {
+        $(document).trigger("ws/connect");
         console.log("Socket reconnected");
     }
 }
+setInterval(() => {
+    if (socket.OPEN) {
+        socket.send(JSON.stringify({
+            method: "ping"
+        }))
+    }
+}, 5000)
 connect();

@@ -23,9 +23,19 @@ $(document).on("ws/data", (event, data) => {
         $(".info-title").html(track.name);
         $(".info-artist").html(artists);
         $(".info-art").attr("src", track.album.images[0].url);
+
+        $(".time-bar").css("background", `rgb(${current.item.color[0]}, ${current.item.color[1]}, ${current.item.color[2]})`)
+
         $(".screen").css("background", `linear-gradient(90deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 60%, rgba(0,0,0,0.75) 100%), url(${track.album.images[0].url})`);
         $(".screen").css("background-size", "auto 100%");
         $(".screen").css("background-position", "right");
+
+        $(".meta").css("opacity", 1);
+        $(".time-bar").css("opacity", 1);
+        setTimeout(() => {
+            $(".meta").css("opacity", .5);
+            $(".time-bar").css("opacity", .5);
+        }, 10000)
     } else if (data.return == "spotify/time") {
         current.time = data.payload;
         $(".previous, .now, .next").html("");
@@ -35,7 +45,7 @@ $(document).on("ws/data", (event, data) => {
             `)
         } else {
             $(".lyrics").append(`
-                <div class="now"><i class="fa-regular fa-ellipsis fa-beat-fade"></i></div>
+                <div class="now"><i class="fa-regular fa-ellipsis lyric-intermission"></i></div>
             `)
         }
     } else if (data.return == "spotify/lyrics") {
@@ -51,15 +61,17 @@ $(document).on("ws/data", (event, data) => {
         $(".previous, .now, .next").remove();
         if (current.time < data.payload[0].time.total * 100) {
             $(".lyrics").append(`
-                <div class="next">${current.lyrics[0].text || `<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`}</div>
+                <div class="next">${current.lyrics[0].text || `<i class="fa-regular fa-ellipsis lyric-intermission"></i>`}</div>
             `)
         } else {
             $(".lyrics").append(`
-                <div class="next"><i class="fa-regular fa-ellipsis fa-beat-fade"></i></div>
+                <div class="next"><i class="fa-regular fa-ellipsis lyric-intermission"></i></div>
             `)
         }
     } else if (data.return == "spotify/pause") {
         current.is_playing = false;
+    } else if (data.return == "karaoke/sync") {
+        current.time = current.time + data.payload;
     }
 })
 
@@ -75,19 +87,19 @@ setInterval(() => {
 
                     $(".lyrics .now").attr("class", "previous")
                     if (current.lyrics[i-1]) {
-                        $(".lyrics .previous").html(current.lyrics[i-1].text || `<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`);
+                        $(".lyrics .previous").html(current.lyrics[i-1].text || `<i class="fa-regular fa-ellipsis lyric-intermission"></i>`);
                     } else {
-                        $(".lyrics .previous").html(`<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`);
+                        $(".lyrics .previous").html(`<i class="fa-regular fa-ellipsis lyric-intermission"></i>`);
                     }
 
                     $(".lyrics .next").attr("class", "now")
-                    $(".lyrics .now").html(lyric.text || `<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`);
+                    $(".lyrics .now").html(lyric.text || `<i class="fa-regular fa-ellipsis lyric-intermission"></i>`);
                     if (current.lyrics[i+1]) {
                         $(".lyrics").append(`
-                            <div class="next animate__animated animate__fadeInUp">${current.lyrics[i+1].text || `<i class="fa-regular fa-ellipsis fa-beat-fade"></i>`}</div>
+                            <div class="next animate__animated animate__fadeInUp">${current.lyrics[i+1].text || `<i class="fa-regular fa-ellipsis lyric-intermission"></i>`}</div>
                         `)
                     } else {
-                        $(".lyrics").append(`<div class="next animate__animated animate__fadeInUp"><i class="fa-regular fa-ellipsis fa-beat-fade"></i></div>`)
+                        $(".lyrics").append(`<div class="next animate__animated animate__fadeInUp"><i class="fa-regular fa-ellipsis lyric-intermission"></i></div>`)
                     }
                 }
             })
