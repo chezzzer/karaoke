@@ -189,7 +189,6 @@ ${playback.item.artists[0].name} - ${playback.item.name}
     })
     .catch((e) => {
         console.log("Error with tracking playback", e);
-        process.exit();
     })
 }
 
@@ -200,9 +199,7 @@ if (fs.existsSync("./spotify.json")) {
     //refresh it now since it might've been some time since we ran this code
     refreshToken()
     //track playback of the client by checking it every 500ms, why no WS spotify!
-    setTimeout(() => {
-        setInterval(trackPlayback, 500);
-    }, 1000)
+    setInterval(trackPlayback, 500);
 }
 
 var lyricsBusy = false;
