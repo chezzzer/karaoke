@@ -188,7 +188,7 @@ ${playback.item.artists[0].name} - ${playback.item.name}
         }
     })
     .catch((e) => {
-        console.log(e);
+        console.log("Error with tracking playback", e);
         process.exit();
     })
 }
