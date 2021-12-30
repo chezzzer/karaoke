@@ -86,7 +86,7 @@ function refreshToken() {
                 console.log("Refreshed Token");
             })
             .catch((e) => {
-                console.log("Authentication Error, Please login again.");
+                console.log("Authentication Error, Please login again.", e);
                 process.exit();
             })
         }
@@ -355,6 +355,7 @@ app.ws("/", async (ws, req) => {
                         //add it to the queue
                         spotify.addToQueue(data.uri, {device_id: current.playback.device.id})
                         .catch((e) => {
+                            console.log("Unable to add to queue", e);
                             ws.send(JSON.stringify({
                                 return: "karaoke/error",
                                 payload: "Error contacting services.",
@@ -496,7 +497,7 @@ app.get("/oauth", (req, res) => {
         }
     )
     .catch((e) => {
-        console.log("Authentication Error, Please login again.");
+        console.log("Authentication Error, Please login again.", e);
         process.exit();
     })
     res.redirect("/");
