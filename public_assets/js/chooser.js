@@ -122,7 +122,9 @@ $(document).on("ws/data", (event, data) => {
         $("#admin").fadeIn();
         $("body").addClass("admin");
         $("#adminLogin").remove();
-        $("#footer").append(`<a onclick="setCookie('admin_password', '');location.reload()" class="text-muted text-decoration-none ps-1 pointer">Log Out</a>`)
+        if (!$(".admin-logout").length) {
+            $("#footer").append(`<a onclick="setCookie('admin_password', '');location.reload()" class="text-muted text-decoration-none ps-1 pointer admin-logout">Log Out</a>`)
+        }
         let password = $("[name=admin-password]").val();
         if (!getCookie("admin_password") && password) {
             setCookie("admin_password", password)
