@@ -261,6 +261,7 @@ function getLyrics(track) {
                     //cancel lock
                     lyricsBusy = false;
                 } else {
+                    console.log("Lyrics for this song are restricted.")
                     resolve(false)
                     lyricsBusy = false;
                 }
