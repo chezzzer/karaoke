@@ -26,15 +26,15 @@ $(document).on("ws/data", (event, data) => {
 
         $(".time-bar").css("background", `rgb(${current.item.color[0]}, ${current.item.color[1]}, ${current.item.color[2]})`)
 
-        $(".screen").css("background", `linear-gradient(90deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 60%, rgba(0,0,0,0.75) 100%), url(${track.album.images[0].url})`);
+        $(".screen").css("background", `linear-gradient(90deg, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 60%, rgba(0,0,0,0.5) 100%), url(${track.album.images[0].url})`);
         $(".screen").css("background-size", "auto 100%");
         $(".screen").css("background-position", "right");
 
         $(".meta").css("opacity", 1);
         $(".time-bar").css("opacity", 1);
         setTimeout(() => {
-            $(".meta").css("opacity", .5);
-            $(".time-bar").css("opacity", .5);
+            $(".meta").css("opacity", .75);
+            $(".time-bar").css("opacity", .75);
         }, 10000)
     } else if (data.return == "spotify/time") {
         current.time = data.payload;
