@@ -1,138 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex" />
-    <link href="https://kit-pro.fontawesome.com/releases/v6.0.0-beta1/css/pro.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/assets/css/chooser.css">
-    <link rel="shortcut icon" href="/assets/img/favicon.ico" type="image/x-icon">
-    <link rel="icon" href="/assets/img/favicon.ico" type="image/x-icon">
-    
-    <title>Karaoke Jukebox</title>
-</head>
-<body>
-    <div class="container my-5">
-        <div class="d-block d-sm-flex">
-            <h2 class="fw-bold my-auto">Karaoke Jukebox</h2>
-            <div class="ms-auto me-4 my-auto">
-                <h4 class="text-muted" id="time"></h4>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="robots" content="noindex" />
+        <link
+            href="https://kit-pro.fontawesome.com/releases/v6.0.0-beta1/css/pro.min.css"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="/assets/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="/assets/css/chooser.css" />
+        <link rel="shortcut icon" href="/assets/img/favicon.ico" type="image/x-icon" />
+        <link rel="icon" href="/assets/img/favicon.ico" type="image/x-icon" />
+
+        <title>Karaoke Jukebox</title>
+    </head>
+    <body>
+        <div class="container my-5">
+            <div class="d-block d-sm-flex">
+                <h2 class="fw-bold my-auto">Karaoke Jukebox</h2>
+                <div class="ms-auto me-4 my-auto">
+                    <h4 class="text-muted" id="time"></h4>
+                </div>
+                <div class="song-info">
+                    <a
+                        href=""
+                        target="_blank"
+                        class="text-white text-decoration-none"
+                        id="song-link"
+                    >
+                        <div class="d-flex p-2 bg-darker shadow rounded" style="min-width: 200px">
+                            <img
+                                src="/assets/img/logo.png"
+                                width="52px"
+                                height="52px"
+                                style="object-fit: cover"
+                                class="my-auto rounded"
+                                id="song-art"
+                            />
+                            <div class="ms-3 me-2 my-auto w-100">
+                                <div id="song-title" class="fw-bold lh-1">No Song Playing</div>
+                                <small class="text-muted" id="song-artists"></small>
+                                <div class="progress mt-1" id="song-progress">
+                                    <div class="progress-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
             </div>
-            <div class="song-info">
-                <a href="" target="_blank" class="text-white text-decoration-none" id="song-link">
-                    <div class="d-flex p-2 bg-darker shadow rounded" style="min-width: 200px;">
-                        <img src="/assets/img/logo.png" width="52px" height="52px" style="object-fit: cover;" class="my-auto rounded" id="song-art">
-                        <div class="ms-3 me-2 my-auto w-100">
-                            <div id="song-title" class="fw-bold lh-1">No Song Playing</div>
-                            <small class="text-muted" id="song-artists"></small>
-                            <div class="progress mt-1" id="song-progress">
-                                <div class="progress-bar" style="width: 0%"></div>
+            <div class="position-relative">
+                <div class="seach-loader" style="display: none">
+                    <div class="my-auto">
+                        <i class="fa-duotone fa-spinner-third text-muted fa-2x fa-spin"></i>
+                    </div>
+                </div>
+                <div class="mt-4 bg-darker rounded p-4 shadow">
+                    <input
+                        autocomplete="false"
+                        type="text"
+                        class="form-control-plaintext fs-2 text-white px-3 pb-2 pt-0"
+                        id="song-search"
+                        placeholder="start typing..."
+                    />
+                </div>
+            </div>
+            <div class="mt-3 search-results row"></div>
+            <div class="mt-4">
+                <div class="d-flex">
+                    <h3 class="my-auto">Featured Catalogue</h3>
+                    <div class="ms-auto my-auto">
+                        <div class="badge bg-darker pointer" onclick="refreshCatalogue()">
+                            <i class="fa-solid fa-rotate-right"></i> Refresh
+                        </div>
+                    </div>
+                </div>
+                <div class="catalogue mt-3 row"></div>
+            </div>
+            <div class="mt-4 row">
+                <div class="col-sm-5 mb-3">
+                    <h3>Coming Up</h3>
+                    <div class="queue row mt-3"></div>
+                </div>
+                <div class="col-sm-5 offset-sm-2 mb-3">
+                    <h3>Recently Played</h3>
+                    <div class="history row mt-3"></div>
+                </div>
+            </div>
+            <div id="admin" style="display: none">
+                <h3>Admin Controls</h3>
+                <div class="row">
+                    <div class="col-sm-4 mb-3">
+                        <h5>Lyric Sync</h5>
+                        <input
+                            type="range"
+                            class="form-range"
+                            min="-1000"
+                            value="0"
+                            max="1000"
+                            id="lyric-sync"
+                        />
+                        <div class="d-flex">
+                            <div class="w-50">Lyrics are faster</div>
+                            <div class="w-50 text-end">Lyrics are slower</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4 my-auto">
+                        <div class="d-flex">
+                            <div class="w-100 d-flex">
+                                <a
+                                    onclick="player('previous')"
+                                    class="m-auto btn btn-secondary px-3"
+                                >
+                                    <i class="fa-light fa-backward"></i>
+                                </a>
+                            </div>
+                            <div class="w-100 d-flex">
+                                <a onclick="player('replay')" class="m-auto btn btn-secondary px-3">
+                                    <i class="fa-light fa-arrows-repeat"></i>
+                                </a>
+                            </div>
+                            <div class="w-100 d-flex">
+                                <a onclick="player('pause')" class="m-auto btn btn-secondary px-3">
+                                    <i class="fa-light fa-pause"></i>
+                                </a>
+                            </div>
+                            <div class="w-100 d-flex">
+                                <a onclick="player('play')" class="m-auto btn btn-secondary px-3">
+                                    <i class="fa-light fa-play"></i>
+                                </a>
+                            </div>
+                            <div class="w-100 d-flex">
+                                <a onclick="player('next')" class="m-auto btn btn-secondary px-3">
+                                    <i class="fa-light fa-forward"></i>
+                                </a>
                             </div>
                         </div>
                     </div>
-                </a>
-            </div>
-        </div>
-        <div class="position-relative">
-            <div class="seach-loader" style="display: none;">
-                <div class="my-auto">
-                    <i class="fa-duotone fa-spinner-third text-muted fa-2x fa-spin"></i>
                 </div>
             </div>
-            <div class="mt-4 bg-darker rounded p-4 shadow">
-                <input type="text" class="form-control-plaintext fs-2 text-white px-3 pb-2 pt-0" id="song-search" placeholder="start typing...">
+            <div class="py-4 text-center text-muted" id="footer">
+                <b>©️ Copyright Ryan Cherry 2021 - 2022 </b>
+                <a
+                    id="adminLogin"
+                    href="#adminModal"
+                    data-bs-toggle="modal"
+                    style="opacity: 0.5"
+                    class="text-muted text-decoration-none ps-1"
+                    >Admin</a
+                >
             </div>
         </div>
-        <div class="mt-3 search-results row"></div>
-        <div class="mt-4">
-            <div class="d-flex">
-                <h3 class="my-auto">Featured Catalouge</h3>
-                <div class="ms-auto my-auto">
-                    <div class="badge bg-darker pointer" onclick="refreshCatalouge()"><i class="fa-solid fa-rotate-right"></i> Refresh</div>
-                </div>
-            </div>
-            <div class="catalouge mt-3 row"></div>
-        </div>
-        <div class="mt-4 row">
-            <div class="col-sm-5 mb-3">
-                <h3>Coming Up</h3>
-                <div class="queue row mt-3"></div>
-            </div>
-            <div class="col-sm-5 offset-sm-2 mb-3">
-                <h3>Recently Played</h3>
-                <div class="history row mt-3"></div>
-            </div>
-        </div>
-        <div id="admin" style="display: none;">
-            <h3>Admin Controls</h3>
-            <div class="row">
-                <div class="col-sm-4 mb-3">
-                    <h5>Lyric Sync</h5>
-                    <input type="range" class="form-range" min="-1000" value="0" max="1000" id="lyric-sync">
-                    <div class="d-flex">
-                        <div class="w-50">
-                            Lyrics are faster
-                        </div>
-                        <div class="w-50 text-end">
-                            Lyrics are slower
-                        </div>
+        <div class="modal fade" id="adminModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Login</h5>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"
+                        ></button>
                     </div>
-                </div>
-                <div class="col-sm-4 my-auto">
-                    <div class="d-flex">
-                        <div class="w-100 d-flex">
-                            <a onclick="player('previous')" class="m-auto btn btn-secondary px-3">
-                                <i class="fa-light fa-backward"></i>
-                            </a>
-                        </div>
-                        <div class="w-100 d-flex">
-                            <a onclick="player('replay')" class="m-auto btn btn-secondary px-3">
-                                <i class="fa-light fa-arrows-repeat"></i>
-                            </a>
-                        </div>
-                        <div class="w-100 d-flex">
-                            <a onclick="player('pause')" class="m-auto btn btn-secondary px-3">
-                                <i class="fa-light fa-pause"></i>
-                            </a>
-                        </div>
-                        <div class="w-100 d-flex">
-                            <a onclick="player('play')" class="m-auto btn btn-secondary px-3">
-                                <i class="fa-light fa-play"></i>
-                            </a>
-                        </div>
-                        <div class="w-100 d-flex">
-                            <a onclick="player('next')" class="m-auto btn btn-secondary px-3">
-                                <i class="fa-light fa-forward"></i>
-                            </a>
-                        </div>
+                    <div class="modal-body">
+                        <label for="admin-password" class="form-label">Password</label>
+                        <input
+                            type="password"
+                            class="form-control mb-3"
+                            name="admin-password"
+                            placeholder="password"
+                        />
+                        <a onclick="requestAdmin()" class="mx-auto btn btn-primary text-white"
+                            >Submit</a
+                        >
                     </div>
                 </div>
             </div>
         </div>
-        <div class="py-4 text-center text-muted" id="footer">
-            <b>©️ Copyright Ryan Cherry 2021 - 2022 </b> <a id="adminLogin" href="#adminModal" data-bs-toggle="modal" style="opacity: .5;" class="text-muted text-decoration-none ps-1">Admin</a>
-        </div>
-    </div>
-    <div class="modal fade" id="adminModal">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Login</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <label for="admin-password" class="form-label">Password</label>
-                <input type="password" class="form-control mb-3" name="admin-password" placeholder="password">
-                <a onclick="requestAdmin()" class="mx-auto btn btn-primary text-white">Submit</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    <script src="/assets/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/jquery-3.6.0.min.js"></script>
-    <script src="/assets/js/socket.js"></script>
-    <script src="/assets/js/chooser.js"></script>
-</body>
+        <script src="/assets/js/bootstrap.bundle.min.js"></script>
+        <script src="/assets/js/jquery-3.6.0.min.js"></script>
+        <script src="/assets/js/socket.js"></script>
+        <script src="/assets/js/chooser.js"></script>
+    </body>
 </html>

@@ -1,51 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex" />
-    <link href="https://kit-pro.fontawesome.com/releases/v6.0.0-beta1/css/pro.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="/assets/css/screen.css">
-    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-    <link rel="shortcut icon" href="/assets/img/favicon.ico" type="image/x-icon">
-    <link rel="icon" href="/assets/img/favicon.ico" type="image/x-icon">
-    
-    <title>Karaoke Screen</title>
-</head>
-<body>
-    <div class="loading">
-        <div class="m-auto">
-            <i id="loading-icon" class="fa-duotone fa-spinner-third fa-2x fa-spin"></i>
-            <h5 class="mt-4" id="loading-text">Loading</h5>
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="robots" content="noindex" />
+        <link
+            href="https://kit-pro.fontawesome.com/releases/v6.0.0-beta1/css/pro.min.css"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="/assets/css/screen.css" />
+        <link rel="stylesheet" href="/assets/css/bootstrap.min.css" />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+        />
+        <link rel="shortcut icon" href="/assets/img/favicon.ico" type="image/x-icon" />
+        <link rel="icon" href="/assets/img/favicon.ico" type="image/x-icon" />
+
+        <title>Karaoke Screen</title>
+    </head>
+    <body>
+        <div class="loading">
+            <div class="m-auto">
+                <i id="loading-icon" class="fa-duotone fa-spinner-third fa-2x fa-spin"></i>
+                <h5 class="mt-4" id="loading-text">Loading</h5>
+            </div>
         </div>
-    </div>
-    <div class="screen">
-        <div class="lyrics-wrap">
-            <div class="lyrics">
-                <div class="lyrics-inner">
-                    <div class="previous"></div>
-                    <div class="now"><i class="fa-regular fa-ellipsis fa-beat-fade"></i></div>
-                    <div class="next"></div>
+        <div class="waiting-screen" style="display: none">
+            <div class="m-auto waiting-inner">
+                <div class="d-flex">
+                    <img
+                        src="https://i.scdn.co/image/ab67616d0000b2737c5454c462cedb6eb1aa8852"
+                        class="next-img"
+                        alt=""
+                        width="400px"
+                    />
+                    <div class="ms-5 my-auto">
+                        <div style="letter-spacing: 5px" class="fs-3">UP NEXT:</div>
+                        <h1 class="next-title display-1 mb-2 fw-bold">ur mom lol</h1>
+                        <h1 class="next-artist display-3 mb-4">ur mom lol</h1>
+                        <div style="letter-spacing: 5px" class="fs-3 display-3 fw-bold">
+                            STARTING IN: <span class="next-time"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="meta">
-            <img src="" class="info-art mr-3" height="100%" alt="">
-            <div class="ms-3 my-auto d-flex" style="transform: translateY(-2px);">
-                <div class="info-title fw-bold my-auto" style="font-size: 1.75rem;"></div>
-                <div class="text-muted mx-2" style="font-size:2rem">-</div>
-                <div class="info-artist my-auto" style="font-size: 1.5rem;"></div>
+        <div class="screen">
+            <div class="lyrics-wrap">
+                <div class="lyrics">
+                    <div class="lyrics-inner">
+                        <div class="previous"></div>
+                        <div class="now"><i class="fa-regular fa-ellipsis fa-beat-fade"></i></div>
+                        <div class="next"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="meta">
+                <img src="" class="info-art mr-3" height="100%" alt="" />
+                <div class="ms-3 my-auto d-flex" style="transform: translateY(-2px)">
+                    <div class="info-title fw-bold my-auto" style="font-size: 1.75rem"></div>
+                    <div class="text-muted mx-2" style="font-size: 2rem">-</div>
+                    <div class="info-artist my-auto" style="font-size: 1.5rem"></div>
+                </div>
+            </div>
+            <div class="time">
+                <div class="time-bar"></div>
             </div>
         </div>
-        <div class="time">
-            <div class="time-bar"></div>
-        </div>
-    </div>
-    <script src="/assets/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/jquery-3.6.0.min.js"></script>
-    <script src="/assets/js/socket.js"></script>
-    <script src="/assets/js/screen.js"></script>
-</body>
+        <script src="/assets/js/bootstrap.bundle.min.js"></script>
+        <script src="/assets/js/jquery-3.6.0.min.js"></script>
+        <script src="/assets/js/socket.js"></script>
+        <script src="/assets/js/screen.js"></script>
+    </body>
 </html>

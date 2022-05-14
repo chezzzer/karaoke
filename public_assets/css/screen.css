@@ -9,6 +9,20 @@
     text-align: center;
 }
 
+.waiting-screen {
+    z-index: 75;
+    position: absolute;
+    background: #000;
+    width: 100%;
+    height: 100vh;
+    color: #fff;
+    display: flex;
+}
+
+.waiting-inner {
+    width: 1200px;
+}
+
 .screen {
     z-index: 50;
     position: fixed;
@@ -64,6 +78,7 @@
     position: absolute;
     top: 7rem;
     font-size: 55px;
+    font-weight: 500;
     margin-top: 0px !important;
 }
 

@@ -9,6 +9,7 @@ const Events = require("events");
 const agents = require("user-agent-array");
 const events = new Events();
 const SpotifyWebApi = require("spotify-web-api-node");
+const e = require("express");
 
 console.log("Welcome, starting...");
 
@@ -105,6 +106,7 @@ function trackPlayback() {
     spotify
         .getMyCurrentPlaybackState()
         .then(async (playback) => {
+            let queued = false;
             playback = playback.body;
             //check if there is a current song playing and is not paused
             if (playback.item && playback.is_playing) {
@@ -132,14 +134,38 @@ ${playback.item.artists[0].name} - ${playback.item.name}
                     current.id = playback.item.id;
                     //check if track is in queue
                     if (current.queue.has(current.id)) {
-                        //delete current track from queue
-                        current.queue.delete(current.id);
+                        let queue = current.queue.get(current.id);
+                        if (queue.type == "await") {
+                            //delete current track from queue
+                            current.queue.delete(current.id);
+                        } else {
+                            queue.type = "await";
+                            current.queue.set(current.id, queue);
 
-                        //set volume to queue volume in config
-                        spotify.setVolume(config.volume.queue);
+                            //set queue to true as we will need it later
+                            queued = true;
+
+                            //pause playback and wait
+                            spotify.pause();
+
+                            //set volume to queue volume in config
+                            spotify.setVolume(config.karaoke.volume.queue);
+
+                            events.emit("data", {
+                                return: "spotify/await",
+                                payload: {
+                                    time: config.karaoke.wait_time * 1000,
+                                    track: queue,
+                                },
+                            });
+
+                            setTimeout(() => {
+                                spotify.play();
+                            }, config.karaoke.wait_time * 1000);
+                        }
                     } else {
                         //set volume to playlist volume in config
-                        spotify.setVolume(config.volume.playlist);
+                        spotify.setVolume(config.karaoke.volume.playlist);
                     }
 
                     //get album art color
@@ -152,10 +178,12 @@ ${playback.item.artists[0].name} - ${playback.item.name}
                     //reset lyrics
                     current.lyrics = null;
                     //tell all sockets its new song time
-                    events.emit("data", {
-                        return: "spotify/playback",
-                        payload: current.playback,
-                    });
+                    if (!queued) {
+                        events.emit("data", {
+                            return: "spotify/playback",
+                            payload: current.playback,
+                        });
+                    }
                     //tell all sockets its new lyrics time
                     events.emit("data", {
                         return: "spotify/lyrics",
@@ -388,46 +416,12 @@ app.ws("/", async (ws, req) => {
                         musixmatch = musixmatch.data.message.body.track;
                         //check if it is restricted or an instrumental
                         if (
-                            musixmatch.has_lyrics &&
-                            musixmatch.has_subtitles &&
-                            !musixmatch.instrumental &&
-                            !musixmatch.restricted
-                        ) {
-                            //add it to the queue
-                            spotify
-                                .addToQueue(data.uri, { device_id: current.playback.device.id })
-                                .catch((e) => {
-                                    console.log("Unable to add to queue", e);
-                                    ws.send(
-                                        JSON.stringify({
-                                            return: "karaoke/error",
-                                            payload: "Error contacting services.",
-                                            uri: data.uri,
-                                        })
-                                    );
-                                });
-
-                            //tell client that this peticular song has been queued
-                            ws.send(
-                                JSON.stringify({
-                                    return: "karaoke/queued",
-                                    uri: data.uri,
-                                })
-                            );
-
-                            //put it into the full track into memory for future calls
-                            let id = data.uri.replace("spotify:track:", "");
-                            spotify.getTrack(id).then(({ body }) => {
-                                //insert into queue
-                                current.queue.set(id, body);
-                                //inform all sockets that there is a queue change
-                                events.emit("data", {
-                                    return: "karaoke/queue",
-                                    payload: Object.fromEntries(current.queue),
-                                });
-                            });
-                        } else {
-                            ws.send(
+                            !musixmatch.has_lyrics ||
+                            !musixmatch.has_subtitles ||
+                            musixmatch.instrumental ||
+                            musixmatch.restricted
+                        )
+                            return ws.send(
                                 JSON.stringify({
                                     return: "karaoke/error",
                                     payload:
@@ -435,9 +429,53 @@ app.ws("/", async (ws, req) => {
                                     uri: data.uri,
                                 })
                             );
+
+                        if (!current.playback.device) {
+                            return ws.send(
+                                JSON.stringify({
+                                    return: "karaoke/error",
+                                    payload: "The player is currently not taking requests.",
+                                    uri: data.uri,
+                                    recoverable: true,
+                                })
+                            );
                         }
+                        //add it to the queue
+                        spotify
+                            .addToQueue(data.uri, { device_id: current.playback.device.id })
+                            .catch((e) => {
+                                console.log("Unable to add to queue", e);
+                                ws.send(
+                                    JSON.stringify({
+                                        return: "karaoke/error",
+                                        payload: "Error contacting services.",
+                                        uri: data.uri,
+                                    })
+                                );
+                            });
+
+                        //tell client that this peticular song has been queued
+                        ws.send(
+                            JSON.stringify({
+                                return: "karaoke/queued",
+                                uri: data.uri,
+                            })
+                        );
+
+                        //put it into the full track into memory for future calls
+                        let id = data.uri.replace("spotify:track:", "");
+                        spotify.getTrack(id).then(({ body }) => {
+                            //insert into queue
+                            current.queue.set(id, body);
+                            //inform all sockets that there is a queue change
+                            events.emit("data", {
+                                return: "karaoke/queue",
+                                payload: Object.fromEntries(current.queue),
+                            });
+                        });
                     })
-                    .catch(() => {
+                    .catch((e) => {
+                        console.log("Track Queue Error", e);
                         ws.send(
                             JSON.stringify({
                                 return: "karaoke/error",
@@ -446,18 +484,14 @@ app.ws("/", async (ws, req) => {
                         );
                     });
             }
-        } else if (data.method == "catalouge") {
+        } else if (data.method == "catalogue") {
+            config.spotify.catalogue.type = "track";
             spotify
-                .getRecommendations({
-                    min_danceability: 0.25,
-                    seed_genres: ["rock", "rock-n-roll", "rockabilly", "pop", "new-release"],
-                    min_popularity: 75,
-                    market: "NZ",
-                })
+                .getRecommendations(config.spotify.catalogue)
                 .then((data) => {
                     ws.send(
                         JSON.stringify({
-                            return: "spotify/catalouge",
+                            return: "spotify/catalogue",
                             payload: data.body.tracks,
                         })
                     );
